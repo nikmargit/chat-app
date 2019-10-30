@@ -1,6 +1,37 @@
-import React from "react"
+import React, { useState, useEffect } from "react"
+import firebase from "firebase"
+import "firebase/firestore"
+
+const config = {
+    apiKey: "AIzaSyCsihx2xMuset-afJPSMwSGyWy8JHqhkBk",
+    authDomain: "chat-app-58d2a.firebaseapp.com",
+    databaseURL: "https://chat-app-58d2a.firebaseio.com",
+    projectId: "chat-app-58d2a",
+    storageBucket: "chat-app-58d2a.appspot.com",
+    messagingSenderId: "1062212632465",
+    appId: "1:1062212632465:web:9c3097ac3e1f534a3e6430",
+}
+
+firebase.initializeApp(config)
+
+const db = firebase.firestore()
 
 function App() {
+    const [channels, setChannels] = useState([])
+
+    useEffect(() => {
+        return db.collection("channels").onSnapshot(snapshot => {
+            const docs = []
+            snapshot.forEach(doc => {
+                docs.push({
+                    ...doc.data(),
+                    id: doc.id,
+                })
+            })
+            setChannels(docs)
+        })
+    }, [])
+
     return (
         <div className="App">
             <div className="Nav">
@@ -18,10 +49,11 @@ function App() {
                     </div>
                 </div>
                 <nav className="ChannelNav">
-                    <a href="/channel/awesome"># awesome</a>
-                    <a className="active" href="/channel/general">
-                        # general
-                    </a>
+                    {channels.map(channel => (
+                        <a href={`/channel/${channel.id}`} key={channel.id}>
+                            # {channel.id}
+                        </a>
+                    ))}
                 </nav>
             </div>
             <div className="Channel">
