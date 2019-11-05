@@ -1,6 +1,15 @@
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import useCollection from "./useCollection"
 import useDocWithCache from "./useDocWithCache"
+import format from "date-fns/format"
+import { isSameDay } from "date-fns/esm"
+
+function useChatScroll(ref) {
+    useEffect(() => {
+        const node = ref.current
+        node.scrollTop = node.scrollHeight
+    })
+}
 
 function Messages({ channelId }) {
     const messages = useCollection(
@@ -8,14 +17,16 @@ function Messages({ channelId }) {
         "createdAt",
     )
 
+    const scrollerRef = useRef()
+    useChatScroll(scrollerRef)
+
     return (
-        <div className="Messages">
+        <div ref={scrollerRef} className="Messages">
             <div className="EndOfMessages">That's every message!</div>
             {messages.map((message, index) => {
                 const previous = messages[index - 1]
-                const showAvatar =
-                    !previous || message.user.id !== previous.user.id
-                const showDay = false
+                const showAvatar = shouldShowAvatar(previous, message)
+                const showDay = shouldShowDay(previous, message)
                 return showAvatar ? (
                     <FirstMessageFromUser
                         message={message}
@@ -41,7 +52,11 @@ function FirstMessageFromUser({ message, showDay }) {
             {showDay && (
                 <div className="Day">
                     <div className="DayLine" />
-                    <div className="DayText">12/6/2018</div>
+                    <div className="DayText">
+                        {new Date(
+                            message.createdAt.seconds * 1000,
+                        ).toLocaleDateString()}
+                    </div>
                     <div className="DayLine" />
                 </div>
             )}
@@ -59,13 +74,43 @@ function FirstMessageFromUser({ message, showDay }) {
                         <span className="UserName">
                             {author && author.displayName}
                         </span>{" "}
-                        <span className="TimeStamp">3:37 PM</span>
+                        <span className="TimeStamp">
+                            {format(message.createdAt.seconds * 1000, "h:mm a")}
+                        </span>
                     </div>
                     <div className="MessageContent">{message.text}</div>
                 </div>
             </div>
         </div>
     )
+}
+
+function shouldShowDay(previous, message) {
+    const isFirst = !previous
+    if (isFirst) {
+        return true
+    }
+
+    return !isSameDay(
+        previous.createdAt.seconds * 1000,
+        message.createdAt.seconds * 1000,
+    )
+}
+
+function shouldShowAvatar(previous, message) {
+    const isFirst = !previous
+    if (isFirst) {
+        return true
+    }
+
+    const differentUser = message.user.id !== previous.user.id
+    if (differentUser) {
+        return true
+    }
+
+    const hasBeenAWhile =
+        message.createdAt.seconds - previous.createdAt.seconds > 180
+    return hasBeenAWhile
 }
 
 export default Messages
